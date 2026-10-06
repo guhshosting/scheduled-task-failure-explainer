@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:scheduled-task-failure-explainer:report:1.0",
+  "title": "scheduled-task-failure-explainer 1.0 report",
+  "type": "object",
+  "required": ["schema_version", "application_version"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "application_version": {"type": "string"},
+    "task": {"type": "object", "required": ["path", "name"], "properties": {"path": {"type": "string"}, "name": {"type": "string"}}},
+    "runtime": {"type": "object", "required": ["enabled", "state", "last_run_time_local", "next_run_time_local", "missed_runs"], "properties": {"enabled": {"type": "boolean"}, "state": {"type": "string"}, "last_run_time_local": {"type": ["string", "null"]}, "next_run_time_local": {"type": ["string", "null"]}, "missed_runs": {"type": "integer", "minimum": -1}}},
+    "configuration": {"type": "object", "required": ["principal", "settings"]},
+    "actions": {"type": "array", "items": {"type": "object", "required": ["type", "type_value", "command", "arguments", "working_directory", "local_path_check"]}},
+    "triggers": {"type": "array", "items": {"type": "object", "required": ["type", "type_value", "enabled", "details"]}},
+    "last_result": {"type": "object", "required": ["hex", "unsigned_decimal", "kind", "message", "known_failure"], "properties": {"unsigned_decimal": {"type": "integer", "minimum": 0, "maximum": 4294967295}, "hex": {"type": "string", "pattern": "^0x[0-9A-F]{8}$"}, "known_failure": {"type": "boolean"}}},
+    "history": {"type": "object", "required": ["status", "events", "window_days", "max_examined_events", "max_returned_events"], "properties": {"status": {"enum": ["available", "disabled", "access_denied", "unavailable"]}, "events": {"type": "array", "maxItems": 100, "items": {"type": "object", "required": ["id", "record_id", "time_utc", "task_path", "instance_id", "data", "result_interpretation"]}}}},
+    "findings": {"type": "array", "items": {"type": "object", "required": ["id", "basis", "message"]}},
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "error": {"type": "object", "required": ["message", "exit_code", "code"], "properties": {"message": {"type": "string"}, "exit_code": {"enum": [2, 3, 4]}, "code": {"type": ["string", "null"]}}}
+  },
+  "oneOf": [
+    {"required": ["task", "runtime", "configuration", "actions", "triggers", "last_result", "history", "findings", "warnings"], "not": {"required": ["error"]}},
+    {"required": ["error"], "not": {"required": ["task"]}}
+  ]
+}

@@ -1,0 +1,30 @@
+'use strict';
+const fs = require('node:fs');
+const path = require('node:path');
+const os = require('node:os');
+const assert = require('node:assert/strict');
+const { spawnSync } = require('node:child_process');
+const root = path.resolve(__dirname, '..');
+const artifact = path.join(root, 'artifacts');
+fs.mkdirSync(artifact, { recursive: true });
+function command(exe, args, file) {
+    const r = spawnSync(exe, args, { encoding: 'utf8', timeout: 15000 });
+    if (r.error) throw r.error;
+    assert.equal(r.status, 0, `${exe}: ${r.stdout} ${r.stderr}`);
+    const text = r.stdout + r.stderr;
+    fs.writeFileSync(path.join(artifact, file), text);
+    return text;
+}
+fs.writeFileSync(path.join(artifact, 'os.json'), JSON.stringify({ version: os.version(), release: os.release(), architecture: os.arch(), date_utc: new Date().toISOString() }, null, 2) + '\n');
+command('whoami.exe', ['/all'], 'nonadmin-identity.txt');
+command('cmake.exe', ['--version'], 'cmake-version.txt');
+command('C:\\Program Files\\LLVM\\bin\\clang-tidy.exe', ['--version'], 'clang-tidy-version.txt');
+command('C:\\Program Files\\Cppcheck\\cppcheck.exe', ['--version'], 'cppcheck-version.txt');
+const sdk = 'C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.26100.0\\x64';
+const compiler = 'C:\\Program Files (x86)\\Microsoft Visual Studio\\18\\BuildTools\\VC\\Tools\\MSVC\\14.51.36231\\bin\\Hostx64\\x64';
+const exe = path.join(root, 'build-release', 'scheduled-task-failure-explainer.exe');
+const imports = command(path.join(compiler, 'dumpbin.exe'), ['/dependents', exe], 'release-imports.txt');
+assert(!/WS2_32|WINHTTP|WININET|MSVCP140|VCRUNTIME140/i.test(imports), 'Unexpected network or dynamic compiler-runtime import');
+command(path.join(sdk, 'mt.exe'), ['-nologo', `-inputresource:${exe};#1`, `-out:${path.join(artifact, 'embedded.manifest')}`], 'manifest-check.txt');
+assert(fs.readFileSync(path.join(artifact, 'embedded.manifest'), 'utf8').includes('level="asInvoker"'));
+console.log('OS, non-admin identity, tool versions, native imports and embedded asInvoker manifest evidence captured.');
